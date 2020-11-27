@@ -11,6 +11,7 @@ import { NewsService } from 'src/app/services/news.service';
 })
 export class ResultsComponent implements OnInit {
   countryID: string;
+  countryName: string;
   headlines: [{}];
   savedArticles: [{}];
   constructor(
@@ -24,6 +25,7 @@ export class ResultsComponent implements OnInit {
     this.countryID = this.activatedRoute.snapshot.params['code'];
 
     this.getNews();
+    this.getCountryName();
   }
 
   async getNews() {
@@ -48,6 +50,16 @@ export class ResultsComponent implements OnInit {
   notification(text, action) {
     this._snackBar.open(text, action, {
       duration: 2000,
+    });
+  }
+
+  async getCountryName() {
+    let results = await this.db.getCountries();
+
+    results.forEach((country) => {
+      if (country['alpha2Code'] === this.countryID) {
+        this.countryName = country['name'];
+      }
     });
   }
 }

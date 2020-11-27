@@ -2,7 +2,7 @@
   <div class="row d-flex justify-content-end">
     <button class="btn btn-warning" [routerLink]="['/countries']">Back</button>
   </div>
-
+  <h3>{{ countryName }}</h3>
   <div class="card-columns">
     <div class="card" *ngFor="let news of savedArticles">
       <img [src]="news['urlToImage']" class="card-img-top" />
