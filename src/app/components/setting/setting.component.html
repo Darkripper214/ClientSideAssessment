@@ -1,0 +1,39 @@
+<div class="container">
+  <h2>Settings</h2>
+  <small>NewsApi.org</small>
+
+  <form [formGroup]="settingForm" (ngSubmit)="onSubmit()">
+    <mat-form-field appearance="fill" class="fullWidth">
+      <mat-label>Enter your Api Key</mat-label>
+      <input matInput formControlName="apiKey" />
+      <mat-error *ngIf="settingForm.get('apiKey').hasError('required')"
+        >Please Key in Your API Key from newsapi.org</mat-error
+      >
+    </mat-form-field>
+
+    <div class="row mt-2">
+      <div class="col-9">
+        <button class="btn btn-primary mr-2" type="button" (click)="onBack()">
+          Back
+        </button>
+        <button
+          class="btn btn-danger"
+          type="button"
+          (click)="onDelete()"
+          [disabled]="!apiKey"
+        >
+          Delete
+        </button>
+      </div>
+      <div class="col-3 d-flex justify-content-end">
+        <button
+          class="btn btn-primary"
+          type="submit"
+          [disabled]="settingForm.invalid"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

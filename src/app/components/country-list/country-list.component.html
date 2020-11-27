@@ -1,0 +1,20 @@
+<div class="container">
+  <h3>Countries</h3>
+  <div class="row d-flex justify-content-end">
+    <button class="btn btn-primary mr-3 mb-2" [routerLink]="['/setting']">
+      Setting
+    </button>
+  </div>
+
+  <div class="list-group" *ngIf="countryList">
+    <a
+      type="button"
+      class="list-group-item list-group-item-action"
+      *ngFor="let country of countryList"
+      [routerLink]="country['alpha2Code']"
+      ><div class="d-flex justify-content-between">
+        {{ country["name"] }}
+        <img [src]="country['flag']" /></div
+    ></a>
+  </div>
+</div>

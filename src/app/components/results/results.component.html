@@ -1,0 +1,55 @@
+<div class="container">
+  <div class="row d-flex justify-content-end">
+    <button class="btn btn-warning" [routerLink]="['/countries']">Back</button>
+  </div>
+
+  <div class="card-columns">
+    <div class="card" *ngFor="let news of savedArticles">
+      <img [src]="news['urlToImage']" class="card-img-top" />
+      <div class="card-body">
+        <h5 class="card-title">{{ news["title"] }}</h5>
+        <p class="card-text">Author: {{ news["author"] }}</p>
+        <p class="card-text">Description: {{ news["description"] }}</p>
+        <p class="card-text">Content: {{ news["content"] }}</p>
+        <p class="card-text">
+          <small class="text-muted">{{
+            news["publishedAt"] | date: "medium"
+          }}</small>
+        </p>
+        <p class="card-text">
+          <small class="text-muted">{{ news["source"]["name"] }}</small>
+        </p>
+        <a class="btn btn-primary" target="_blank" [href]="news['url']"
+          >Read More</a
+        >
+        <button class="btn btn-danger" (click)="deleteArticle(news)">
+          Delete Article
+        </button>
+      </div>
+    </div>
+
+    <div class="card" *ngFor="let news of headlines">
+      <img [src]="news['urlToImage']" class="card-img-top" />
+      <div class="card-body">
+        <h5 class="card-title">{{ news["title"] }}</h5>
+        <p class="card-text">Author: {{ news["author"] }}</p>
+        <p class="card-text">Description: {{ news["description"] }}</p>
+        <p class="card-text">Content: {{ news["content"] }}</p>
+        <p class="card-text">
+          <small class="text-muted">{{
+            news["publishedAt"] | date: "medium"
+          }}</small>
+        </p>
+        <p class="card-text">
+          <small class="text-muted">{{ news["source"]["name"] }}</small>
+        </p>
+        <a class="btn btn-primary" target="_blank" [href]="news['url']"
+          >Read More</a
+        >
+        <button class="btn btn-warning" (click)="saveArticle(news)">
+          Save Article
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
