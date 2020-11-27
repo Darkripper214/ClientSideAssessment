@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { MatSnackBar, SimpleSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, ActivatedRouteSnapshot } from '@angular/router';
 import { DatabaseService } from 'src/app/services/database.service';
 import { NewsService } from 'src/app/services/news.service';
@@ -15,7 +16,8 @@ export class ResultsComponent implements OnInit {
   constructor(
     private newsService: NewsService,
     private activatedRoute: ActivatedRoute,
-    private db: DatabaseService
+    private db: DatabaseService,
+    private _snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -33,11 +35,19 @@ export class ResultsComponent implements OnInit {
 
   async saveArticle(article: {}) {
     await this.newsService.saveArticle(this.countryID, article);
+    this.notification('Article Saved', 'remove');
     await this.getNews();
   }
 
   async deleteArticle(article: {}) {
     await this.newsService.deleteArticle(this.countryID, article);
+    this.notification('Article Removed', 'remove');
     await this.getNews();
+  }
+
+  notification(text, action) {
+    this._snackBar.open(text, action, {
+      duration: 2000,
+    });
   }
 }

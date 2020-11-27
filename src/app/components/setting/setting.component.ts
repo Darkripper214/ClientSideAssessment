@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { DatabaseService } from 'src/app/services/database.service';
 import { NewsService } from 'src/app/services/news.service';
@@ -13,7 +14,8 @@ export class SettingComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private newsService: NewsService,
-    private router: Router
+    private router: Router,
+    private _snackBar: MatSnackBar
   ) {}
   settingForm: FormGroup;
   apiKey: string;
@@ -27,6 +29,7 @@ export class SettingComponent implements OnInit {
 
   async onSubmit() {
     await this.newsService.saveAPIKey(this.settingForm.value);
+    this.notification('api key saved', 'remove');
     this.router.navigate(['/countries']);
   }
 
@@ -54,5 +57,10 @@ export class SettingComponent implements OnInit {
     if (result['apiKey']) {
       this.apiKey = result['apiKey'];
     }
+  }
+  notification(text, action) {
+    this._snackBar.open(text, action, {
+      duration: 2000,
+    });
   }
 }
