@@ -221,7 +221,7 @@ export class NewsService {
 
     if (articleIndex >= 0) {
       savedArticle.splice(articleIndex, 1);
-      originalArticle.push(article);
+      originalArticle.unshift(article);
 
       await this.db.updateCache(countryCode, {
         savedArticle: savedArticle,
