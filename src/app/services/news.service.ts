@@ -134,7 +134,7 @@ export class NewsService {
       let time = Date.now();
       let cachedTime = Date.parse(headlineDB['timestamp']);
       let timeDiff = (time - cachedTime) / 1000 / 60;
-      if (timeDiff >= 1) {
+      if (timeDiff >= 5) {
         let payload;
         console.log('Time greater than 5 minute!');
         payload = await this.headlineAPICall(countryCode);
