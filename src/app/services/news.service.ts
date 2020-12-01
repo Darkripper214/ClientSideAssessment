@@ -1,6 +1,6 @@
 import { Injectable, ɵConsole } from '@angular/core';
 import { stringify } from 'querystring';
-import { apiKey } from '../model/model';
+import { apiKey, Country } from '../model/model';
 import { DatabaseService } from './database.service';
 import { HttpService } from './http.service';
 
@@ -9,63 +9,7 @@ import { HttpService } from './http.service';
 })
 export class NewsService {
   apiKey: string;
-  countryListData: [{}];
-  countryList: string[] = [
-    'ae',
-    'ar',
-    'at',
-    'au',
-    'be',
-    'bg',
-    'br',
-    'ca',
-    'ch',
-    'cn',
-    'co',
-    'cu',
-    'cz',
-    'de',
-    'eg',
-    'fr',
-    'gb',
-    'gr',
-    'hk',
-    'hu',
-    'id',
-    'ie',
-    'il',
-    'in',
-    'it',
-    'jp',
-    'kr',
-    'lt',
-    'lv',
-    'ma',
-    'mx',
-    'my',
-    'ng',
-    'nl',
-    'no',
-    'nz',
-    'ph',
-    'pl',
-    'pt',
-    'ro',
-    'rs',
-    'ru',
-    'sa',
-    'se',
-    'sg',
-    'si',
-    'sk',
-    'th',
-    'tr',
-    'tw',
-    'ua',
-    'us',
-    've',
-    'za',
-  ];
+  countryListData: Country;
   constructor(private db: DatabaseService, private http: HttpService) {}
 
   async saveAPIKey(apiKey: apiKey) {
@@ -82,7 +26,6 @@ export class NewsService {
       this.apiKey = result['apiKey'];
       return { apiKey: result.apiKey };
     } catch (error) {
-      // console.error(error);
       return { apiKey: '' };
     }
   }
@@ -91,60 +34,64 @@ export class NewsService {
     this.db.deleteAPI();
   }
 
-  getCountriesData(): string {
-    let countryString: string = '';
-    this.countryList.forEach((s) => {
-      countryString = countryString + s + ';';
-    });
-    return countryString;
+  async countryListInit(): Promise<Country[]> {
+    let DBData = await this.getCountriesFromDB();
+    if (DBData) {
+      return DBData;
+    } else {
+      console.log('getting from API!!');
+      let results = await this.http.getCountriesData().toPromise();
+      let list = results.map((c) => {
+        return {
+          code: c['alpha2Code'].toLowerCase(),
+          name: c['name'],
+          flag: c['flag'],
+        } as Country;
+      });
+      this.db.saveCountries(list);
+      return list;
+    }
   }
 
-  async saveCountriesToDB(countries: [{}]) {
-    await this.db.saveCountries(countries);
-  }
   async getCountriesFromDB() {
     try {
       let result = await this.db.getCountries();
       this.countryListData = await result;
-      //Remove db PK
-      delete result['id'];
+      if (result) {
+        //Remove db PK
+        delete result['id'];
+      }
       return result;
     } catch (error) {
       console.log(error);
     }
   }
 
-  // getHeadlines(countryCode: string) {
-  //   let results;
-  //   this.http.getHeadLines(countryCode, this.apiKey).subscribe((result) => {
-  //     console.log(result);
-  //     results = result['articles'];
-  //   });
-  //   return results;
-  // }
-
   async getHeadlines(countryCode: string) {
+    // Ensure api key is available -- failsafe
     await this.getAPIKey();
 
+    // Get headline from DB
     let headlineDB = await this.db.getHeadlines(countryCode);
-    console.log(headlineDB);
-    if (headlineDB) {
-      console.log('return cache');
 
-      let time = Date.now();
+    if (headlineDB) {
+      // Check timestamp, dispose if exceeded expiry duration
       let cachedTime = Date.parse(headlineDB['timestamp']);
-      let timeDiff = (time - cachedTime) / 1000 / 60;
+      let timeDiff = (Date.now() - cachedTime) / 1000 / 60;
+
       if (timeDiff >= 5) {
         let payload;
         console.log('Time greater than 5 minute!');
+
         payload = await this.headlineAPICall(countryCode);
         await this.db.updateCache(countryCode, payload);
         return await this.db.getHeadlines(countryCode);
       }
+      // Serve from DB if duration not expired
+      console.log('return cache');
       return headlineDB;
     } else {
       let payload;
-      console.log('here');
       payload = await this.headlineAPICall(countryCode);
       console.log(payload);
       await this.db.saveHeadlines(payload);
@@ -154,7 +101,7 @@ export class NewsService {
 
   async headlineAPICall(countryCode: string) {
     let results = await this.http.getHeadLines(countryCode, this.apiKey);
-
+    // append timestamp and code into result
     results['timestamp'] = new Date();
     results['code'] = countryCode;
     return results;
@@ -164,6 +111,8 @@ export class NewsService {
     let results = await this.db.getHeadlines(countryCode);
     let originalArticle = results['articles'];
     let savedArticle = results['savedArticle'];
+
+    // Saved Article is not guaranteed to be in DB, only exists if user save
     if (!savedArticle) {
       savedArticle = [];
     }
@@ -179,6 +128,7 @@ export class NewsService {
       });
     }
 
+    // If article to be save does not exists in savedArticle, loop to get index to remove from original article
     if (checkStatus) {
       savedArticle.push(article);
       //Remove from original article
@@ -190,7 +140,9 @@ export class NewsService {
           console.log(articleIndex);
         }
       });
+      // Remove the article
       originalArticle.splice(articleIndex, 1);
+      console.log('removed');
 
       await this.db.updateCache(countryCode, {
         savedArticle: savedArticle,

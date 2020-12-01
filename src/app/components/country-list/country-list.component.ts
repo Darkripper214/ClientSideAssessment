@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Country } from 'src/app/model/model';
 import { HttpService } from 'src/app/services/http.service';
 import { NewsService } from 'src/app/services/news.service';
 
@@ -9,7 +10,7 @@ import { NewsService } from 'src/app/services/news.service';
   styleUrls: ['./country-list.component.css'],
 })
 export class CountryListComponent implements OnInit {
-  countryList: [{}];
+  countryList: Country[];
   constructor(
     private newsService: NewsService,
     private http: HttpService,
@@ -20,31 +21,20 @@ export class CountryListComponent implements OnInit {
     this.checkAPIKey();
   }
 
-  country() {
-    return this.newsService.getCountriesData();
-  }
-
   async getCountryList() {
-    let DBData = await this.newsService.getCountriesFromDB();
-    if (DBData) {
-      console.log('getting from DB!');
-      this.countryList = DBData;
-      console.log(this.countryList);
-    } else {
-      console.log('getting from API!!');
-      this.http.getCountriesData(this.country()).subscribe((results) => {
-        this.countryList = results;
-        this.newsService.saveCountriesToDB(this.countryList);
-      });
-    }
+    // Get Country List either from DB or API
+    this.countryList = await this.newsService.countryListInit();
   }
 
   async checkAPIKey() {
+    // Check if API Key available
     let result = await this.newsService.getAPIKey();
 
     if (result['apiKey']) {
+      // Get List of Country
       this.getCountryList();
     } else {
+      // Redirect to Setting Page
       window.alert('No API Key detected, redirecting to setting page');
 
       this.router.navigate(['/setting']);

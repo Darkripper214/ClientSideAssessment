@@ -23,7 +23,7 @@ export class SettingComponent implements OnInit {
     this.settingForm = this.fb.group({
       apiKey: ['', [Validators.required]],
     });
-    this.checkAPIKey();
+    // this.checkAPIKey();
     this.getAPI();
   }
 
@@ -47,17 +47,14 @@ export class SettingComponent implements OnInit {
     try {
       let apiKey = await this.newsService.getAPIKey();
       this.settingForm.patchValue(apiKey);
+      if (apiKey['apiKey']) {
+        this.apiKey = apiKey['apiKey'];
+      }
     } catch (error) {
       console.error(error);
     }
   }
 
-  async checkAPIKey() {
-    let result = await this.newsService.getAPIKey();
-    if (result['apiKey']) {
-      this.apiKey = result['apiKey'];
-    }
-  }
   notification(text, action) {
     this._snackBar.open(text, action, {
       duration: 2000,

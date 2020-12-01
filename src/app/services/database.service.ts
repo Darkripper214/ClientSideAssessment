@@ -35,7 +35,7 @@ export class DatabaseService extends Dexie {
     return await this.apiDB.toCollection().first();
   }
 
-  async saveCountries(countries: [{}]) {
+  async saveCountries(countries) {
     await this.countryDB.clear();
     return await this.countryDB.put(countries);
   }

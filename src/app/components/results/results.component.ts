@@ -57,7 +57,7 @@ export class ResultsComponent implements OnInit {
     let results = await this.db.getCountries();
 
     results.forEach((country) => {
-      if (country['alpha2Code'] === this.countryID) {
+      if (country['code'] === this.countryID) {
         this.countryName = country['name'];
       }
     });

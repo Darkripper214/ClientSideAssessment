@@ -5,6 +5,7 @@ import {
   HttpParams,
 } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { COUNTRIES } from '../model/model';
 
 @Injectable({
   providedIn: 'root',
@@ -12,10 +13,10 @@ import { Injectable } from '@angular/core';
 export class HttpService {
   constructor(private http: HttpClient) {}
 
-  getCountriesData(countryList: string) {
+  getCountriesData() {
     let countryUrl = 'https://restcountries.eu/rest/v2/alpha';
     let params = new HttpParams();
-    params = params.set('codes', countryList);
+    params = params.set('codes', COUNTRIES);
     return this.http.get<[{}]>(countryUrl, { params: params });
   }
 
@@ -24,11 +25,7 @@ export class HttpService {
     let params = new HttpParams();
     params = params.set('country', countryCode);
     params = params.set('category', 'general');
-    params = params.set('pageSize', '30');
-    // let headers = new HttpHeaders({
-    //   'Content-Type': 'application/json',
-    //   'X-Api-Key': apiKey,
-    // });
+    params = params.set('pageSize', '5');
     let results = await this.http
       .get<{}>(newsUrl, {
         params: params,
