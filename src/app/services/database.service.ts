@@ -21,16 +21,16 @@ export class DatabaseService extends Dexie {
     this.newsDB = this.table('newsDB');
   }
 
-  async saveAPI(apiKey: apiKey) {
+  async saveAPI(apiKey: apiKey): Promise<any> {
     await this.apiDB.clear();
     await this.apiDB.add(apiKey, '1');
   }
 
-  async deleteAPI() {
+  async deleteAPI(): Promise<any> {
     await this.apiDB.clear();
   }
 
-  async getApi() {
+  async getApi(): Promise<any> {
     // Get the first item
     return await this.apiDB.toCollection().first();
   }

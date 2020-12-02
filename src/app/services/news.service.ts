@@ -1,114 +1,165 @@
 import { Injectable, ɵConsole } from '@angular/core';
 import { stringify } from 'querystring';
+import { BehaviorSubject, Observable, of, Subject, throwError } from 'rxjs';
 import { apiKey, Country } from '../model/model';
 import { DatabaseService } from './database.service';
 import { HttpService } from './http.service';
+import { fromPromise } from 'rxjs/internal-compatibility';
+import {
+  catchError,
+  filter,
+  map,
+  mergeMap,
+  retry,
+  take,
+  tap,
+} from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
 })
 export class NewsService {
+  private apiKeySubject = new BehaviorSubject<string>('');
+  apiKey$: Observable<string> = this.apiKeySubject.asObservable();
+  private articlesSubject = new BehaviorSubject<{}>({});
+  articlesSubject$: Observable<{}> = this.articlesSubject.asObservable();
+
   apiKey: string;
   countryListData: Country;
   constructor(private db: DatabaseService, private http: HttpService) {}
 
-  async saveAPIKey(apiKey: apiKey) {
-    await this.db.saveAPI(apiKey);
-    let result = await this.db.getApi();
-    this.apiKey = result['apiKey'];
-
-    console.log(this.apiKey);
+  saveAPIKey(apiKey: apiKey) {
+    const dbSaveApi$ = fromPromise(this.db.saveAPI(apiKey))
+      .pipe(take(1))
+      .subscribe();
+    this.apiKeySubject.next(apiKey['apiKey']);
   }
 
-  async getAPIKey() {
-    try {
-      let result = await this.db.getApi();
-      this.apiKey = result['apiKey'];
-      return { apiKey: result.apiKey };
-    } catch (error) {
-      return { apiKey: '' };
-    }
+  getAPIKey() {
+    const dbGetApi$ = fromPromise(this.db.getApi()).pipe(
+      // tap((res) => console.log(res)),
+      filter((res) => res !== undefined),
+      map((res) => res['apiKey']),
+      catchError((err) => throwError(err)),
+      take(1)
+    );
+
+    let sub = dbGetApi$.subscribe(
+      (value) => {
+        console.log(value);
+        this.apiKeySubject.next(value);
+        this.apiKeySubject.complete();
+        return value;
+      },
+      (error) => console.log(error)
+    );
   }
 
-  async deleteAPIKey() {
+  deleteAPIKey() {
     this.db.deleteAPI();
+    this.apiKeySubject.next('');
   }
 
-  async countryListInit(): Promise<Country[]> {
-    let DBData = await this.getCountriesFromDB();
-    if (DBData) {
-      return DBData;
-    } else {
-      console.log('getting from API!!');
-      let results = await this.http.getCountriesData().toPromise();
-      let list = results.map((c) => {
-        return {
-          code: c['alpha2Code'].toLowerCase(),
-          name: c['name'],
-          flag: c['flag'],
-        } as Country;
-      });
-      this.db.saveCountries(list);
-      return list;
-    }
+  getCountryFromDB(): Observable<Country[]> {
+    return fromPromise(this.db.getCountries()).pipe(
+      map((res) => {
+        if (res) {
+          delete res['id'];
+        }
+        return res;
+      })
+    );
   }
 
-  async getCountriesFromDB() {
-    try {
-      let result = await this.db.getCountries();
-      this.countryListData = await result;
-      if (result) {
-        //Remove db PK
-        delete result['id'];
-      }
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+  getCountryFromAPI(): Observable<any> {
+    return this.http.getCountriesData().pipe(
+      map((res: [{}]) => {
+        let list: Country[] = [];
+        res.forEach((c) => {
+          list.push({
+            code: c['alpha2Code'].toLowerCase(),
+            name: c['name'],
+            flag: c['flag'],
+          } as Country);
+        });
+        this.db.saveCountries(list);
+        console.log('saved to DB');
+        return list;
+      })
+    );
   }
 
-  async getHeadlines(countryCode: string) {
-    // Ensure api key is available -- failsafe
-    await this.getAPIKey();
-
-    // Get headline from DB
-    let headlineDB = await this.db.getHeadlines(countryCode);
-
-    if (headlineDB) {
-      // Check timestamp, dispose if exceeded expiry duration
-      let cachedTime = Date.parse(headlineDB['timestamp']);
-      let timeDiff = (Date.now() - cachedTime) / 1000 / 60;
-
-      if (timeDiff >= 5) {
-        let payload;
-        console.log('Time greater than 5 minute!');
-
-        payload = await this.headlineAPICall(countryCode);
-        await this.db.updateCache(countryCode, payload);
-        return await this.db.getHeadlines(countryCode);
-      }
-      // Serve from DB if duration not expired
-      console.log('return cache');
-      return headlineDB;
-    } else {
-      let payload;
-      payload = await this.headlineAPICall(countryCode);
-      console.log(payload);
-      await this.db.saveHeadlines(payload);
-      return await this.db.getHeadlines(countryCode);
-    }
+  headlineFromDB(countryCode: string): Observable<any> {
+    return fromPromise(this.db.getHeadlines(countryCode));
   }
 
-  async headlineAPICall(countryCode: string) {
-    let results = await this.http.getHeadLines(countryCode, this.apiKey);
-    // append timestamp and code into result
-    results['timestamp'] = new Date();
-    results['code'] = countryCode;
-    return results;
+  headlineAPICall(countryCode: string, apiKey: string): Observable<{}> {
+    console.log(apiKey);
+    console.log(countryCode);
+    return this.http.getHeadLines(countryCode, apiKey).pipe(
+      map((res) => {
+        res['timestamp'] = new Date();
+        res['code'] = countryCode;
+        return res;
+      })
+    );
+  }
+
+  clearArticle() {
+    this.articlesSubject.next({});
+  }
+
+  async init(countryID: string) {
+    // Getting api Key - Firstcase is during navigation - Secondcase for init, as api Key is completed
+    let apiKey =
+      this.apiKeySubject.getValue() || (await this.apiKey$.toPromise());
+    console.log(this.apiKeySubject.getValue());
+    console.log('here');
+    console.log(apiKey);
+    let headlineFromDB$ = this.headlineFromDB(countryID).pipe(
+      take(1),
+      mergeMap((res) => {
+        if (!res) {
+          // If no data in DB, call API and save as new
+          console.log('im here');
+          console.log(res);
+          return headlineAPICall$.pipe(
+            map((res) => {
+              console.log('het res');
+              res['savedArticle'] = [];
+              this.db.saveHeadlines(res);
+              return res;
+            })
+          );
+        } else if (res['timestamp']) {
+          // If data in DB, check if expired
+          let cachedTime = Date.parse(res['timestamp']);
+          let timeDiff = (Date.now() - cachedTime) / 1000 / 60;
+          console.log(timeDiff);
+          if (timeDiff >= 5) {
+            // data expired, using update to preserved existing saved article
+            console.log('Time greater than 5 minute!');
+            return headlineAPICall$.pipe(
+              map((res) => {
+                this.db.updateCache(countryID, res);
+                return res;
+              })
+            );
+          }
+          console.log('less than 5 min');
+          return of(res);
+        }
+      })
+    );
+
+    let headlineAPICall$ = this.headlineAPICall(countryID, apiKey).pipe();
+    console.log(headlineAPICall$);
+    console.log('before subs');
+    headlineFromDB$.subscribe((res) => this.articlesSubject.next(res));
   }
 
   async saveArticle(countryCode: string, article: {}) {
-    let results = await this.db.getHeadlines(countryCode);
+    let results = this.articlesSubject.getValue();
     let originalArticle = results['articles'];
     let savedArticle = results['savedArticle'];
 
@@ -148,11 +199,15 @@ export class NewsService {
         savedArticle: savedArticle,
         articles: originalArticle,
       });
+
+      this.headlineFromDB(countryCode).subscribe((res) =>
+        this.articlesSubject.next(res)
+      );
     }
   }
 
   async deleteArticle(countryCode: string, article: {}) {
-    let results = await this.db.getHeadlines(countryCode);
+    let results = this.articlesSubject.getValue();
     let savedArticle = results['savedArticle'];
     let originalArticle = results['articles'];
     if (!savedArticle) {
@@ -179,6 +234,9 @@ export class NewsService {
         savedArticle: savedArticle,
         articles: originalArticle,
       });
+      this.headlineFromDB(countryCode).subscribe((res) =>
+        this.articlesSubject.next(res)
+      );
     }
   }
 }

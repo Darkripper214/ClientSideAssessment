@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { MatSnackBar, SimpleSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, ActivatedRouteSnapshot } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { filter, map, mergeMap, retry, skip, take } from 'rxjs/operators';
 import { DatabaseService } from 'src/app/services/database.service';
 import { NewsService } from 'src/app/services/news.service';
 
@@ -9,11 +11,13 @@ import { NewsService } from 'src/app/services/news.service';
   templateUrl: './results.component.html',
   styleUrls: ['./results.component.css'],
 })
-export class ResultsComponent implements OnInit {
-  countryID: string;
+export class ResultsComponent implements OnInit, OnDestroy {
+  countryID: string = this.activatedRoute.snapshot.params['code'];
   countryName: string;
   headlines: [{}];
+  headlines$: Observable<{}>;
   savedArticles: [{}];
+
   constructor(
     private newsService: NewsService,
     private activatedRoute: ActivatedRoute,
@@ -22,29 +26,26 @@ export class ResultsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.countryID = this.activatedRoute.snapshot.params['code'];
-
-    this.getNews();
+    // this.getNews();
     this.getCountryName();
+    this.newsService.init(this.countryID);
+    this.headlines$ = this.newsService.articlesSubject$;
   }
 
-  async getNews() {
-    let results = await this.newsService.getHeadlines(this.countryID);
-    console.log(results);
-    this.headlines = results['articles'];
-    this.savedArticles = results['savedArticle'];
+  ngOnDestroy(): void {
+    this.newsService.clearArticle();
   }
 
   async saveArticle(article: {}) {
     await this.newsService.saveArticle(this.countryID, article);
     this.notification('Article Saved', 'remove');
-    await this.getNews();
+    // await this.getNews();
   }
 
   async deleteArticle(article: {}) {
     await this.newsService.deleteArticle(this.countryID, article);
     this.notification('Article Removed', 'remove');
-    await this.getNews();
+    // await this.getNews();
   }
 
   notification(text, action) {

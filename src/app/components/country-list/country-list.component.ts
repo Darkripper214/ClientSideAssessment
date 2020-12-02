@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Observable, Subscription, of } from 'rxjs';
+import { mergeMap, skip, take, tap } from 'rxjs/operators';
 import { Country } from 'src/app/model/model';
-import { HttpService } from 'src/app/services/http.service';
 import { NewsService } from 'src/app/services/news.service';
 
 @Component({
@@ -9,35 +10,46 @@ import { NewsService } from 'src/app/services/news.service';
   templateUrl: './country-list.component.html',
   styleUrls: ['./country-list.component.css'],
 })
-export class CountryListComponent implements OnInit {
-  countryList: Country[];
-  constructor(
-    private newsService: NewsService,
-    private http: HttpService,
-    private router: Router
-  ) {}
+export class CountryListComponent implements OnInit, OnDestroy {
+  countryList$: Observable<Country[]>;
+  apiKeySub: Subscription;
+  constructor(private newsService: NewsService, private router: Router) {}
 
   ngOnInit(): void {
-    this.checkAPIKey();
+    // this.checkAPIKey();
+    this.newsService.getAPIKey();
+    this.countryList$ = this.countryFromDB$;
+    this.apiKeySub = this.newsService.apiKey$
+      // skip1 to avoid taking the default value of behaviorSubject
+      .pipe(skip(1))
+      .subscribe((apiKey) => {
+        // Check if API Key available
+        if (!apiKey.length) {
+          // Redirect to Setting Page
+          window.alert('No API Key detected, redirecting to setting page');
+          this.router.navigate(['/setting']);
+        }
+      });
   }
 
-  async getCountryList() {
-    // Get Country List either from DB or API
-    this.countryList = await this.newsService.countryListInit();
+  ngOnDestroy(): void {
+    this.apiKeySub.unsubscribe();
   }
 
-  async checkAPIKey() {
-    // Check if API Key available
-    let result = await this.newsService.getAPIKey();
+  countryFromAPI$ = this.newsService.getCountryFromAPI().pipe(
+    take(1),
+    tap(() => console.log('From API'))
+  );
 
-    if (result['apiKey']) {
-      // Get List of Country
-      this.getCountryList();
-    } else {
-      // Redirect to Setting Page
-      window.alert('No API Key detected, redirecting to setting page');
-
-      this.router.navigate(['/setting']);
-    }
-  }
+  countryFromDB$ = this.newsService.getCountryFromDB().pipe(
+    take(1),
+    mergeMap((res) => {
+      // If no contry info in DB, call API
+      if (!res) {
+        console.log(res);
+        return this.countryFromAPI$;
+      } else return of(res);
+    }),
+    tap((res) => console.log(res))
+  );
 }

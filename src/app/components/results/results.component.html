@@ -3,8 +3,8 @@
     <button class="btn btn-warning" [routerLink]="['/countries']">Back</button>
   </div>
   <h3>{{ countryName }}</h3>
-  <div class="card-columns">
-    <div class="card" *ngFor="let news of savedArticles">
+  <div class="card-columns" *ngIf="headlines$ | async as headlines">
+    <div class="card" *ngFor="let news of headlines['savedArticle']">
       <img [src]="news['urlToImage']" class="card-img-top" />
       <div class="card-body">
         <h5 class="card-title">{{ news["title"] }}</h5>
@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <div class="card" *ngFor="let news of headlines">
+    <div class="card" *ngFor="let news of headlines['articles']">
       <img [src]="news['urlToImage']" class="card-img-top" />
       <div class="card-body">
         <h5 class="card-title">{{ news["title"] }}</h5>

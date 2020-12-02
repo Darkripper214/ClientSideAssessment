@@ -17,23 +17,20 @@ export class HttpService {
     let countryUrl = 'https://restcountries.eu/rest/v2/alpha';
     let params = new HttpParams();
     params = params.set('codes', COUNTRIES);
-    return this.http.get<[{}]>(countryUrl, { params: params });
+    return this.http.get(countryUrl, { params: params });
   }
 
-  async getHeadLines(countryCode: string, apiKey: string) {
+  getHeadLines(countryCode: string, apiKey: string) {
     let newsUrl = 'https://newsapi.org/v2/top-headlines';
     let params = new HttpParams();
     params = params.set('country', countryCode);
     params = params.set('category', 'general');
     params = params.set('pageSize', '5');
-    let results = await this.http
-      .get<{}>(newsUrl, {
-        params: params,
-        headers: {
-          'X-Api-Key': apiKey,
-        },
-      })
-      .toPromise();
-    return results;
+    return this.http.get<{}>(newsUrl, {
+      params: params,
+      headers: {
+        'X-Api-Key': apiKey,
+      },
+    });
   }
 }

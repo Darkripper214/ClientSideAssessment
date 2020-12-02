@@ -6,7 +6,7 @@
     </button>
   </div>
 
-  <div class="list-group" *ngIf="countryList">
+  <div class="list-group" *ngIf="countryList$ | async as countryList">
     <a
       type="button"
       class="list-group-item list-group-item-action"
